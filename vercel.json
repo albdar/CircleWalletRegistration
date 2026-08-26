@@ -3,15 +3,31 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
 
-  "redirects": [
+  "rewrites": [
     {
       "source": "/wallets",
-      "destination": "/wallets/",
-      "permanent": true
-    }
-  ],
-
-  "rewrites": [
+      "destination": "https://circlewalletregistration.vercel.app/"
+    },
+    {
+      "source": "/wallets/",
+      "destination": "https://circlewalletregistration.vercel.app/"
+    },
+    {
+      "source": "/wallets/assets/:path*",
+      "destination": "https://circlewalletregistration.vercel.app/assets/:path*"
+    },
+    {
+      "source": "/wallets/css/:path*",
+      "destination": "https://circlewalletregistration.vercel.app/css/:path*"
+    },
+    {
+      "source": "/wallets/js/:path*",
+      "destination": "https://circlewalletregistration.vercel.app/js/:path*"
+    },
+    {
+      "source": "/wallets/api/:path*",
+      "destination": "https://circlewalletregistration.vercel.app/api/:path*"
+    },
     {
       "source": "/wallets/:path*",
       "destination": "https://circlewalletregistration.vercel.app/:path*"
