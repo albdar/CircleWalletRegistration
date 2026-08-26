@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <title>Circle Wallet Test</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="titlebar">
+    <div class="app-icon">C</div>
+    <div>
+      <div class="app-title">Circle Wallet Test</div>
+      <div class="app-subtitle">User-Controlled Wallet · Email OTP · Ethereum Sepolia</div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="card">
+      <div class="card-header">
+        <div>
+          <h1>Circle User-Controlled Wallet</h1>
+          <p>Erstellt eine SCA-Wallet auf Ethereum Sepolia.</p>
+        </div>
+        <span id="sdkBadge" class="badge badge-waiting">SDK startet…</span>
+      </div>
+
+      <div class="notice">
+        Der Circle API Key bleibt ausschließlich auf dem Server. Im Browser wird nur die Circle App ID verwendet.
+      </div>
+
+      <div class="field-group">
+        <label for="email">E-Mail-Adresse</label>
+        <input id="email" type="email" autocomplete="email" placeholder="user@example.com" />
+      </div>
+
+      <div class="steps">
+        <button id="btnSendOtp" type="button" disabled>
+          <span class="step-number">1</span>
+          OTP senden
+        </button>
+
+        <button id="btnVerifyOtp" type="button" disabled>
+          <span class="step-number">2</span>
+          OTP bestätigen
+        </button>
+
+        <button id="btnInitialize" type="button" disabled>
+          <span class="step-number">3</span>
+          User initialisieren
+        </button>
+
+        <button id="btnCreateWallet" type="button" disabled>
+          <span class="step-number">4</span>
+          Wallet erstellen
+        </button>
+      </div>
+
+      <div class="secondary-actions">
+        <button id="btnRefresh" class="secondary" type="button" disabled>Wallet aktualisieren</button>
+        <button id="btnReset" class="secondary" type="button">Test zurücksetzen</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Status</h2>
+      <div id="statusBox" class="status status-info">Anwendung wird initialisiert…</div>
+
+      <dl class="details">
+        <div>
+          <dt>Device ID</dt>
+          <dd id="deviceId">–</dd>
+        </div>
+        <div>
+          <dt>Authentifizierung</dt>
+          <dd id="authState">Nicht angemeldet</dd>
+        </div>
+        <div>
+          <dt>Account Type</dt>
+          <dd>SCA</dd>
+        </div>
+        <div>
+          <dt>Zielnetzwerk</dt>
+          <dd>ETH-SEPOLIA</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section id="walletCard" class="card hidden">
+      <div class="card-header">
+        <div>
+          <h2>Wallet</h2>
+          <p>Die von Circle erzeugte User-Controlled Wallet.</p>
+        </div>
+        <span class="badge badge-ok">Bereit</span>
+      </div>
+
+      <dl class="details wallet-details">
+        <div>
+          <dt>Wallet ID</dt>
+          <dd id="walletId">–</dd>
+        </div>
+        <div>
+          <dt>Wallet Address</dt>
+          <dd class="address-row">
+            <span id="walletAddress">–</span>
+            <button id="btnCopyAddress" class="copy-button" type="button">Kopieren</button>
+          </dd>
+        </div>
+        <div>
+          <dt>Blockchain</dt>
+          <dd id="walletBlockchain">–</dd>
+        </div>
+        <div>
+          <dt>USDC Balance</dt>
+          <dd id="walletUsdc">–</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="card compact">
+      <details>
+        <summary>Technische Testinformationen</summary>
+        <pre id="debug">Noch keine Daten.</pre>
+      </details>
+    </section>
+  </main>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
