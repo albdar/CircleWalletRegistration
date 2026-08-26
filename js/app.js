@@ -1,6 +1,8 @@
 import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk";
 
 const appId = import.meta.env.VITE_CIRCLE_APP_ID;
+const baseUrl = import.meta.env.BASE_URL;
+const apiEndpoint = `${baseUrl}api/endpoints`;
 
 const ui = {
   email: document.querySelector("#email"),
@@ -110,7 +112,7 @@ function render() {
 }
 
 async function callApi(action, params = {}) {
-  const response = await fetch("/api/endpoints", {
+  const response = await fetch(apiEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...params }),
