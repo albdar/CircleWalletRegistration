@@ -57,7 +57,7 @@ function apiErrorMessage(data, fallback) {
 }
 
 function publicDebugState() {
-  // Absichtlich keine userToken/encryptionKey/deviceEncryptionKey-Werte anzeigen.
+  // Intentionally do not display userToken/encryptionKey/deviceEncryptionKey values.
   return {
     sdkReady: state.sdkReady,
     deviceId: state.deviceId,
@@ -73,7 +73,7 @@ function publicDebugState() {
 
 function render() {
   ui.deviceId.textContent = state.deviceId || "–";
-  ui.authState.textContent = state.userToken ? "E-Mail verifiziert" : "Nicht angemeldet";
+  ui.authState.textContent = state.userToken ? "Email verified" : "Not signed in";
 
   const hasOtpSession =
     state.deviceToken && state.deviceEncryptionKey && state.otpToken;
@@ -136,9 +136,9 @@ async function callApi(action, params = {}) {
 
 async function initializeSdk() {
   if (!appId || appId === "YOUR_CIRCLE_APP_ID") {
-    setSdkBadge("Konfiguration fehlt", "error");
+    setSdkBadge("Configuration missing", "error");
     setStatus(
-      "VITE_CIRCLE_APP_ID fehlt. Trage die Circle App ID in .env.local ein und starte den Server neu.",
+      "VITE_CIRCLE_APP_ID is missing. Add the Circle App ID to .env.local and restart the server.",
       "error"
     );
     return;
@@ -147,9 +147,9 @@ async function initializeSdk() {
   try {
     const onLoginComplete = (error, result) => {
       if (error || !result) {
-        console.error("Circle Email OTP Login fehlgeschlagen:", error);
+        console.error("Circle Email OTP login failed:", error);
         setStatus(
-          error?.message || "E-Mail-Authentifizierung fehlgeschlagen.",
+          error?.message || "Email authentication failed.",
           "error"
         );
         state.userToken = "";
@@ -162,7 +162,7 @@ async function initializeSdk() {
       state.encryptionKey = result.encryptionKey;
 
       setStatus(
-        "E-Mail erfolgreich verifiziert. Als Nächstes den User initialisieren.",
+        "Email successfully verified. Next, initialize the user.",
         "success"
       );
       render();
@@ -176,8 +176,8 @@ async function initializeSdk() {
     );
 
     state.sdkReady = true;
-    setSdkBadge("SDK bereit", "ok");
-    setStatus("Circle SDK ist bereit. E-Mail-Adresse eingeben und OTP senden.");
+    setSdkBadge("SDK ready", "ok");
+    setStatus("Circle SDK is ready. Enter an email address and send the OTP.");
 
     const cached = localStorage.getItem("circleDeviceId");
     if (cached) {
@@ -190,9 +190,9 @@ async function initializeSdk() {
     render();
   } catch (error) {
     console.error(error);
-    setSdkBadge("SDK Fehler", "error");
+    setSdkBadge("SDK error", "error");
     setStatus(
-      `Circle SDK konnte nicht initialisiert werden: ${error?.message || error}`,
+      `Circle SDK could not be initialized: ${error?.message || error}`,
       "error"
     );
     render();
@@ -205,7 +205,7 @@ async function requestOtp() {
   if (!email || !state.deviceId) return;
 
   try {
-    // Neue Login-Session.
+    // Start a new login session.
     state.deviceToken = "";
     state.deviceEncryptionKey = "";
     state.otpToken = "";
@@ -216,7 +216,7 @@ async function requestOtp() {
     state.usdcBalance = null;
     render();
 
-    setStatus("OTP wird über Circle angefordert…");
+    setStatus("Requesting OTP from Circle…");
 
     const data = await callApi("requestEmailOtp", {
       deviceId: state.deviceId,
@@ -238,13 +238,13 @@ async function requestOtp() {
     });
 
     setStatus(
-      "OTP wurde versendet. Öffne die E-Mail und klicke danach auf „OTP bestätigen“.",
+      "OTP has been sent. Open the email and then click “Verify OTP”.",
       "success"
     );
     render();
   } catch (error) {
     console.error(error);
-    setStatus(`OTP konnte nicht gesendet werden: ${error.message}`, "error");
+    setStatus(`OTP could not be sent: ${error.message}`, "error");
     render();
   }
 }
@@ -253,11 +253,11 @@ function verifyOtp() {
   if (!state.sdk) return;
 
   try {
-    setStatus("Circle OTP-Fenster wird geöffnet…");
+    setStatus("Opening the Circle OTP window…");
     state.sdk.verifyOtp();
   } catch (error) {
     console.error(error);
-    setStatus(`OTP-Fenster konnte nicht geöffnet werden: ${error.message}`, "error");
+    setStatus(`The OTP window could not be opened: ${error.message}`, "error");
   }
 }
 
@@ -265,7 +265,7 @@ async function initializeUser() {
   if (!state.userToken) return;
 
   try {
-    setStatus("Circle User wird initialisiert…");
+    setStatus("Initializing Circle user…");
 
     const data = await callApi("initializeUser", {
       userToken: state.userToken,
@@ -274,29 +274,29 @@ async function initializeUser() {
     state.challengeId = data.challengeId;
 
     if (!state.challengeId) {
-      throw new Error("Circle hat keine challengeId zurückgegeben.");
+      throw new Error("Circle did not return a challengeId.");
     }
 
     setStatus(
-      "User initialisiert. Jetzt „Wallet erstellen“ ausführen.",
+      "User initialized. Now click “Create Wallet”.",
       "success"
     );
     render();
   } catch (error) {
     const circleCode = Number(error?.data?.code ?? error?.data?.data?.code);
 
-    // Circle: User ist bereits initialisiert.
+    // Circle: User is already initialized.
     if (circleCode === 155106) {
       state.challengeId = "";
       setStatus(
-        "Der Circle User ist bereits initialisiert. Bestehende Wallet wird geladen."
+        "The Circle user is already initialized. Loading the existing wallet."
       );
       await loadWallets("alreadyInitialized");
       return;
     }
 
     console.error(error);
-    setStatus(`Initialisierung fehlgeschlagen: ${error.message}`, "error");
+    setStatus(`Initialization failed: ${error.message}`, "error");
     render();
   }
 }
@@ -310,19 +310,19 @@ function createWallet() {
       encryptionKey: state.encryptionKey,
     });
 
-    setStatus("Wallet-Challenge wird ausgeführt…");
+    setStatus("Executing wallet challenge…");
 
     state.sdk.execute(state.challengeId, (error) => {
       if (error) {
-        console.error("Challenge fehlgeschlagen:", error);
+        console.error("Challenge failed:", error);
         setStatus(
-          `Wallet konnte nicht erstellt werden: ${error?.message || "Unbekannter Fehler"}`,
+          `Wallet could not be created: ${error?.message || "Unknown error"}`,
           "error"
         );
         return;
       }
 
-      setStatus("Challenge ausgeführt. Wallet-Daten werden geladen…");
+      setStatus("Challenge completed. Loading wallet data…");
 
       window.setTimeout(async () => {
         state.challengeId = "";
@@ -331,7 +331,7 @@ function createWallet() {
     });
   } catch (error) {
     console.error(error);
-    setStatus(`Challenge konnte nicht gestartet werden: ${error.message}`, "error");
+    setStatus(`Challenge could not be started: ${error.message}`, "error");
   }
 }
 
@@ -339,7 +339,7 @@ async function loadWallets(source = "refresh") {
   if (!state.userToken) return;
 
   try {
-    setStatus("Wallet-Daten werden geladen…");
+    setStatus("Loading wallet data…");
 
     const data = await callApi("listWallets", {
       userToken: state.userToken,
@@ -350,7 +350,7 @@ async function loadWallets(source = "refresh") {
     if (!state.wallets.length) {
       state.usdcBalance = null;
       setStatus(
-        "Noch keine Wallet gefunden. Falls sie gerade erstellt wurde, bitte in wenigen Sekunden erneut aktualisieren."
+        "No wallet found yet. If it was just created, please refresh again in a few seconds."
       );
       render();
       return;
@@ -360,7 +360,7 @@ async function loadWallets(source = "refresh") {
       state.wallets.find((w) => w.blockchain === "ETH-SEPOLIA") ||
       state.wallets[0];
 
-    // Gewünschte Wallet als erste anzeigen.
+    // Display the preferred wallet first.
     state.wallets = [
       primaryWallet,
       ...state.wallets.filter((w) => w.id !== primaryWallet.id),
@@ -369,17 +369,17 @@ async function loadWallets(source = "refresh") {
     await loadUsdcBalance(primaryWallet.id);
 
     if (source === "afterCreate") {
-      setStatus("SCA-Wallet wurde erfolgreich erstellt.", "success");
+      setStatus("SCA wallet was created successfully.", "success");
     } else if (source === "alreadyInitialized") {
-      setStatus("Bestehende Circle Wallet wurde geladen.", "success");
+      setStatus("Existing Circle wallet loaded successfully.", "success");
     } else {
-      setStatus("Wallet-Daten wurden aktualisiert.", "success");
+      setStatus("Wallet data refreshed successfully.", "success");
     }
 
     render();
   } catch (error) {
     console.error(error);
-    setStatus(`Wallet-Daten konnten nicht geladen werden: ${error.message}`, "error");
+    setStatus(`Wallet data could not be loaded: ${error.message}`, "error");
     render();
   }
 }
@@ -403,8 +403,8 @@ async function loadUsdcBalance(walletId) {
 
     state.usdcBalance = usdc?.amount ?? "0";
   } catch (error) {
-    console.warn("USDC Balance konnte nicht geladen werden:", error);
-    state.usdcBalance = "nicht verfügbar";
+    console.warn("USDC balance could not be loaded:", error);
+    state.usdcBalance = "not available";
   }
 }
 
@@ -418,7 +418,7 @@ function resetTest() {
   state.wallets = [];
   state.usdcBalance = null;
   ui.email.value = "";
-  setStatus("Test zurückgesetzt. Neue E-Mail-Adresse eingeben.");
+  setStatus("Test reset. Enter a new email address.");
   render();
 }
 
@@ -429,12 +429,12 @@ async function copyAddress() {
   try {
     await navigator.clipboard.writeText(address);
     const old = ui.btnCopyAddress.textContent;
-    ui.btnCopyAddress.textContent = "Kopiert";
+    ui.btnCopyAddress.textContent = "Copied";
     window.setTimeout(() => {
       ui.btnCopyAddress.textContent = old;
     }, 1300);
   } catch {
-    setStatus("Wallet-Adresse konnte nicht in die Zwischenablage kopiert werden.", "error");
+    setStatus("Wallet address could not be copied to the clipboard.", "error");
   }
 }
 
