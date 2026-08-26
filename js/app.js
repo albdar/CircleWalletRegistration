@@ -3,6 +3,19 @@ import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk";
 const appId = import.meta.env.VITE_CIRCLE_APP_ID;
 const baseUrl = import.meta.env.BASE_URL;
 const apiEndpoint = `${baseUrl}api/endpoints`;
+const authEndpoint = `${baseUrl}api/auth`;
+
+const authUi = {
+  loginView: document.querySelector("#loginView"),
+  walletView: document.querySelector("#walletView"),
+  loginForm: document.querySelector("#loginForm"),
+  loginUser: document.querySelector("#loginUser"),
+  loginPassword: document.querySelector("#loginPassword"),
+  btnLogin: document.querySelector("#btnLogin"),
+  btnLogout: document.querySelector("#btnLogout"),
+  loginStatus: document.querySelector("#loginStatus"),
+  loggedInUser: document.querySelector("#loggedInUser"),
+};
 
 const ui = {
   email: document.querySelector("#email"),
@@ -38,6 +51,142 @@ const state = {
   wallets: [],
   usdcBalance: null,
 };
+
+function setLoginStatus(message, type = "info") {
+  authUi.loginStatus.textContent = message;
+  authUi.loginStatus.className = `status status-${type}`;
+}
+
+function showLogin(message = "Enter your username and password.", type = "info") {
+  authUi.walletView.classList.add("hidden");
+  authUi.loginView.classList.remove("hidden");
+  authUi.loginPassword.value = "";
+  setLoginStatus(message, type);
+
+  window.setTimeout(() => {
+    authUi.loginUser.focus();
+  }, 0);
+}
+
+function showWallet(username) {
+  authUi.loggedInUser.textContent = username || "–";
+  authUi.loginView.classList.add("hidden");
+  authUi.walletView.classList.remove("hidden");
+}
+
+async function parseJsonResponse(response) {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      error: text,
+    };
+  }
+}
+
+async function login(event) {
+  event?.preventDefault();
+
+  const username = authUi.loginUser.value.trim();
+  const password = authUi.loginPassword.value;
+
+  if (!username || !password) {
+    setLoginStatus("Enter both username and password.", "error");
+    return;
+  }
+
+  authUi.btnLogin.disabled = true;
+  setLoginStatus("Signing in…");
+
+  try {
+    const response = await fetch(authEndpoint, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    });
+
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      setLoginStatus(data.error || "Login failed.", "error");
+      return;
+    }
+
+    setLoginStatus("Login successful. Loading wallet application…", "success");
+
+    // Reload after login so all in-memory Circle state starts cleanly under
+    // the newly authenticated server session.
+    window.location.reload();
+  } catch (error) {
+    console.error("Wallet login failed:", error);
+    setLoginStatus(
+      `Login request failed: ${error?.message || String(error)}`,
+      "error"
+    );
+  } finally {
+    authUi.btnLogin.disabled = false;
+  }
+}
+
+async function logout() {
+  authUi.btnLogout.disabled = true;
+
+  try {
+    await fetch(authEndpoint, {
+      method: "DELETE",
+      credentials: "same-origin",
+    });
+  } catch (error) {
+    console.error("Wallet logout failed:", error);
+  } finally {
+    // Reload clears all Circle tokens held only in JavaScript memory.
+    window.location.reload();
+  }
+}
+
+async function checkApplicationLogin() {
+  try {
+    const response = await fetch(authEndpoint, {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      showLogin(data.error || "Could not verify the login session.", "error");
+      return false;
+    }
+
+    if (!data.authenticated) {
+      showLogin();
+      return false;
+    }
+
+    showWallet(data.username);
+    return true;
+  } catch (error) {
+    console.error("Login session check failed:", error);
+    showLogin(
+      `Could not verify the login session: ${error?.message || String(error)}`,
+      "error"
+    );
+    return false;
+  }
+}
 
 function setStatus(message, type = "info") {
   ui.statusBox.textContent = message;
@@ -114,22 +263,23 @@ function render() {
 async function callApi(action, params = {}) {
   const response = await fetch(apiEndpoint, {
     method: "POST",
+    credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...params }),
   });
 
-  const text = await response.text();
-  let data = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { error: text || `HTTP ${response.status}` };
-  }
+  const data = await parseJsonResponse(response);
 
   if (!response.ok) {
     const err = new Error(apiErrorMessage(data, `HTTP ${response.status}`));
     err.status = response.status;
     err.data = data;
+
+    if (response.status === 401 && data.code === "WALLET_LOGIN_REQUIRED") {
+      err.loginRequired = true;
+      showLogin("Your login session has expired. Please sign in again.", "error");
+    }
+
     throw err;
   }
 
@@ -137,10 +287,14 @@ async function callApi(action, params = {}) {
 }
 
 async function initializeSdk() {
+  if (state.sdkReady && state.sdk) {
+    return;
+  }
+
   if (!appId || appId === "YOUR_CIRCLE_APP_ID") {
     setSdkBadge("Configuration missing", "error");
     setStatus(
-      "VITE_CIRCLE_APP_ID is missing. Add the Circle App ID to .env.local and restart the server.",
+      "VITE_CIRCLE_APP_ID is missing. Add the Circle App ID to .env.local or Vercel and deploy again.",
       "error"
     );
     return;
@@ -207,7 +361,7 @@ async function requestOtp() {
   if (!email || !state.deviceId) return;
 
   try {
-    // Start a new login session.
+    // Start a new Circle login session.
     state.deviceToken = "";
     state.deviceEncryptionKey = "";
     state.otpToken = "";
@@ -245,6 +399,7 @@ async function requestOtp() {
     );
     render();
   } catch (error) {
+    if (error.loginRequired) return;
     console.error(error);
     setStatus(`OTP could not be sent: ${error.message}`, "error");
     render();
@@ -285,6 +440,8 @@ async function initializeUser() {
     );
     render();
   } catch (error) {
+    if (error.loginRequired) return;
+
     const circleCode = Number(error?.data?.code ?? error?.data?.data?.code);
 
     // Circle: User is already initialized.
@@ -380,6 +537,7 @@ async function loadWallets(source = "refresh") {
 
     render();
   } catch (error) {
+    if (error.loginRequired) return;
     console.error(error);
     setStatus(`Wallet data could not be loaded: ${error.message}`, "error");
     render();
@@ -405,6 +563,7 @@ async function loadUsdcBalance(walletId) {
 
     state.usdcBalance = usdc?.amount ?? "0";
   } catch (error) {
+    if (error.loginRequired) return;
     console.warn("USDC balance could not be loaded:", error);
     state.usdcBalance = "not available";
   }
@@ -440,6 +599,19 @@ async function copyAddress() {
   }
 }
 
+async function startApplication() {
+  render();
+
+  const authenticated = await checkApplicationLogin();
+  if (!authenticated) {
+    return;
+  }
+
+  await initializeSdk();
+}
+
+authUi.loginForm.addEventListener("submit", login);
+authUi.btnLogout.addEventListener("click", logout);
 ui.email.addEventListener("input", render);
 ui.btnSendOtp.addEventListener("click", requestOtp);
 ui.btnVerifyOtp.addEventListener("click", verifyOtp);
@@ -449,5 +621,4 @@ ui.btnRefresh.addEventListener("click", () => loadWallets("refresh"));
 ui.btnReset.addEventListener("click", resetTest);
 ui.btnCopyAddress.addEventListener("click", copyAddress);
 
-render();
-initializeSdk();
+startApplication();

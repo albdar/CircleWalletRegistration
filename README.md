@@ -1,151 +1,104 @@
-# Circle Wallet Test
+# Circle Wallet Registration
 
-Kleine Vanilla-JavaScript-Testanwendung für **Circle User-Controlled Wallets** mit:
+Vanilla JavaScript test application for Circle User-Controlled Wallets with:
 
-- E-Mail OTP
+- Application login with username and password
+- Server-side signed HttpOnly session cookie
+- Email OTP
 - Circle Web SDK
 - Smart Contract Account (`SCA`)
 - Ethereum Sepolia (`ETH-SEPOLIA`)
 - Vercel Serverless API
-- Anzeige der Wallet-Adresse
-- optionaler Anzeige des USDC-Bestands
+- Wallet address display
+- Optional USDC balance display
 
-## 1. Voraussetzungen
+## 1. Requirements
 
-- Node.js 22 oder neuer
+- Node.js 22 or newer
 - Circle Developer Account
-- Circle Standard API Key
+- Circle API Key
 - Circle User-Controlled Wallet App ID
-- im Circle Configurator eingerichtetes Email OTP / SMTP
+- Email OTP configured for the Circle application
 
-## 2. Projekt entpacken
+## 2. Environment variables
 
-In Git Bash oder PowerShell in den Projektordner wechseln.
+Copy `.env.example` to `.env.local` for local development and replace all placeholders.
 
-```bash
-cd circle-wallet-test
-```
-
-## 3. Umgebungsvariablen anlegen
-
-`.env.example` nach `.env.local` kopieren.
-
-### Git Bash
-
-```bash
-cp .env.example .env.local
-```
-
-### PowerShell
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-Danach `.env.local` bearbeiten:
+Required variables:
 
 ```text
-CIRCLE_API_KEY=DEIN_ECHTER_CIRCLE_API_KEY
-VITE_CIRCLE_APP_ID=DEINE_CIRCLE_APP_ID
+CIRCLE_API_KEY=YOUR_CIRCLE_API_KEY
+VITE_CIRCLE_APP_ID=YOUR_CIRCLE_APP_ID
 CIRCLE_BLOCKCHAIN=ETH-SEPOLIA
 CIRCLE_BASE_URL=https://api.circle.com
+WALLET_LOGIN_USER=walletadmin
+WALLET_LOGIN_PASSWORD=YOUR_STRONG_PASSWORD
+WALLET_SESSION_SECRET=YOUR_LONG_RANDOM_SECRET
 ```
 
-**Wichtig:** `CIRCLE_API_KEY` darf niemals mit `VITE_` beginnen. Variablen mit `VITE_` werden in den Browser-Build übernommen.
+Generate a session secret, for example:
 
-## 4. Abhängigkeiten installieren
+```powershell
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
 
-```bash
+Important:
+
+- `CIRCLE_API_KEY`, `WALLET_LOGIN_USER`, `WALLET_LOGIN_PASSWORD`, and `WALLET_SESSION_SECRET` are server-only values.
+- Never prefix those values with `VITE_`.
+- `VITE_CIRCLE_APP_ID` is intentionally available to the browser.
+- `.env.local` is ignored by Git and must not be pushed to GitHub.
+
+## 3. Install dependencies
+
+```powershell
 npm install
 ```
 
-## 5. Lokal starten
+## 4. Local development
 
-Da das Projekt Vercel Serverless Functions unter `/api` verwendet, lokal über Vercel Dev starten:
+Because the project uses Vercel Serverless Functions under `/api`, start it with Vercel Dev:
 
-```bash
+```powershell
+npm run dev:vercel
+```
+
+The Vite-only command can be used for frontend-only work, but the API functions are not available there:
+
+```powershell
 npm run dev
 ```
 
-Beim ersten Start kann Vercel nach Login bzw. Projektverknüpfung fragen.
+## 5. Login flow
 
-Danach die von Vercel angezeigte lokale URL öffnen, typischerweise:
+When the application opens, it first calls `/wallets/api/auth` to check the signed server session.
 
-```text
-http://localhost:3000
-```
+If there is no valid session, the user sees the login screen. After a successful login, the server sets an HttpOnly, Secure, SameSite=Lax cookie valid for eight hours. The Circle API endpoint rejects requests without that session.
 
-## 6. Testablauf
+Use **Sign Out** to delete the session cookie and clear the in-memory Circle state by reloading the page.
 
-1. E-Mail-Adresse eingeben.
-2. `OTP senden` anklicken.
-3. OTP-Mail öffnen.
-4. `OTP bestätigen` anklicken.
-5. OTP in der von Circle geöffneten Oberfläche eingeben.
-6. `User initialisieren` anklicken.
-7. `Wallet erstellen` anklicken und die Circle Challenge bestätigen.
-8. Nach erfolgreicher Erstellung wird die Wallet-Adresse angezeigt.
+## 6. Circle wallet flow
 
-Bei einem bereits initialisierten Circle User lädt die Anwendung dessen vorhandene Wallet.
+After application login:
 
-## 7. Circle Console prüfen
+1. Enter an email address.
+2. Send OTP.
+3. Verify OTP in the Circle window.
+4. Initialize the Circle user.
+5. Create the SCA wallet.
+6. Refresh the wallet if required.
+7. Review the wallet address and USDC balance.
 
-Nach erfolgreicher Wallet-Erstellung:
+## 7. Vercel configuration
 
-```text
-Circle Developer Console
-→ Wallets
-→ User Controlled
-→ Users
-```
+Add all environment variables to the `circlewalletregistration` Vercel project. `VITE_CIRCLE_APP_ID` must be available during the build. The secret values remain server-side.
 
-Dort sollte der Benutzer bzw. die Wallet sichtbar sein.
+After changing environment variables, redeploy the project.
 
-## 8. Deployment auf Vercel
-
-Das Projekt kann direkt auf Vercel deployed werden.
-
-In Vercel unter:
+The project is configured with the Vite base path:
 
 ```text
-Project
-→ Settings
-→ Environment Variables
+/wallets/
 ```
 
-diese Variablen setzen:
-
-```text
-CIRCLE_API_KEY
-VITE_CIRCLE_APP_ID
-CIRCLE_BLOCKCHAIN=ETH-SEPOLIA
-CIRCLE_BASE_URL=https://api.circle.com
-```
-
-Danach neu deployen.
-
-## 9. Sicherheit
-
-- API Key nur im Backend verwenden.
-- `.env.local` nicht nach Git pushen.
-- `userToken`, `encryptionKey`, `deviceEncryptionKey` nicht loggen.
-- Für diesen Test werden Session-Schlüssel nur im Arbeitsspeicher des Browser-Tabs gehalten.
-- Bei einem Reload muss deshalb erneut per E-Mail OTP authentifiziert werden.
-
-## 10. Nächster Integrationsschritt
-
-Wenn dieser Test funktioniert, kann die Circle Wallet mit dem bestehenden Marketplace verbunden werden:
-
-```text
-Circle User
-    ↓
-SCA Wallet
-    ↓
-PartnerRegistry
-    ↓
-TradeEscrowMarketplace
-    ↓
-approve / payOrder / confirmReceipt / ...
-```
-
-Danach kann optional Circle Gas Station für Gas Sponsoring ergänzt werden.
+The wallet project's `vercel.json` maps `/wallets/assets/...` and `/wallets/api/...` to its generated assets and serverless API routes so it can also be tested directly.

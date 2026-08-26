@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -16,14 +16,65 @@
     </div>
   </header>
 
-  <main class="shell">
+  <main id="loginView" class="shell login-shell">
+    <section class="card login-card">
+      <div class="card-header">
+        <div>
+          <h1>Wallet Login</h1>
+          <p>Sign in to access Circle Wallet Registration.</p>
+        </div>
+        <span class="badge badge-waiting">Protected</span>
+      </div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="field-group">
+          <label for="loginUser">Username</label>
+          <input
+            id="loginUser"
+            type="text"
+            autocomplete="username"
+            required
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="loginPassword">Password</label>
+          <input
+            id="loginPassword"
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <div class="login-actions">
+          <button id="btnLogin" type="submit">Sign In</button>
+        </div>
+      </form>
+
+      <div id="loginStatus" class="status status-info">
+        Enter your username and password.
+      </div>
+    </section>
+  </main>
+
+  <main id="walletView" class="shell hidden">
+    <section class="session-bar">
+      <div>
+        Signed in as <strong id="loggedInUser">–</strong>
+      </div>
+      <button id="btnLogout" class="secondary logout-button" type="button">
+        Sign Out
+      </button>
+    </section>
+
     <section class="card">
       <div class="card-header">
         <div>
           <h1>Circle User-Controlled Wallet</h1>
           <p>Create an SCA wallet on Ethereum Sepolia.</p>
         </div>
-        <span id="sdkBadge" class="badge badge-waiting">SDK startet…</span>
+        <span id="sdkBadge" class="badge badge-waiting">SDK starting…</span>
       </div>
 
       <div class="notice">
@@ -31,19 +82,19 @@
       </div>
 
       <div class="field-group">
-        <label for="email">E-Mail-Address</label>
+        <label for="email">Email Address</label>
         <input id="email" type="email" autocomplete="email" placeholder="user@example.com" />
       </div>
 
       <div class="steps">
         <button id="btnSendOtp" type="button" disabled>
           <span class="step-number">1</span>
-          send OTP 
+          Send OTP
         </button>
 
         <button id="btnVerifyOtp" type="button" disabled>
           <span class="step-number">2</span>
-          confirm OTP 
+          Verify OTP
         </button>
 
         <button id="btnInitialize" type="button" disabled>
@@ -53,12 +104,12 @@
 
         <button id="btnCreateWallet" type="button" disabled>
           <span class="step-number">4</span>
-          Create Wallet 
+          Create Wallet
         </button>
       </div>
 
       <div class="secondary-actions">
-        <button id="btnRefresh" class="secondary" type="button" disabled>Update Wallet</button>
+        <button id="btnRefresh" class="secondary" type="button" disabled>Refresh Wallet</button>
         <button id="btnReset" class="secondary" type="button">Reset Test</button>
       </div>
     </section>
@@ -74,7 +125,7 @@
         </div>
         <div>
           <dt>Authentication</dt>
-          <dd id="authState">Not logged in</dd>
+          <dd id="authState">Not signed in</dd>
         </div>
         <div>
           <dt>Account Type</dt>
@@ -93,7 +144,7 @@
           <h2>Wallet</h2>
           <p>The user-controlled wallet created by Circle.</p>
         </div>
-        <span class="badge badge-ok">Bereit</span>
+        <span class="badge badge-ok">Ready</span>
       </div>
 
       <dl class="details wallet-details">
@@ -105,7 +156,7 @@
           <dt>Wallet Address</dt>
           <dd class="address-row">
             <span id="walletAddress">–</span>
-            <button id="btnCopyAddress" class="copy-button" type="button">Kopieren</button>
+            <button id="btnCopyAddress" class="copy-button" type="button">Copy</button>
           </dd>
         </div>
         <div>

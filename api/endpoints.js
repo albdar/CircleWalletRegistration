@@ -1,8 +1,12 @@
+import { randomUUID } from "node:crypto";
+import { verifySession } from "./_session.js";
+
 const DEFAULT_CIRCLE_BASE_URL = "https://api.circle.com";
 const DEFAULT_BLOCKCHAIN = "ETH-SEPOLIA";
 
 function getBody(req) {
   if (!req.body) return {};
+
   if (typeof req.body === "string") {
     try {
       return JSON.parse(req.body);
@@ -10,6 +14,7 @@ function getBody(req) {
       return {};
     }
   }
+
   return req.body;
 }
 
@@ -28,11 +33,12 @@ async function readCircleResponse(response) {
 }
 
 function send(res, status, body) {
-  res.status(status).json(body);
+  return res.status(status).json(body);
 }
 
 function requireApiKey(res) {
-  const apiKey = process.env.CIRCLE_API_KEY;
+  const apiKey = String(process.env.CIRCLE_API_KEY || "").trim();
+
   if (!apiKey) {
     send(res, 500, {
       error:
@@ -40,12 +46,15 @@ function requireApiKey(res) {
     });
     return null;
   }
+
   return apiKey;
 }
 
 async function circleFetch(path, { method = "GET", body, userToken } = {}) {
-  const apiKey = process.env.CIRCLE_API_KEY;
-  const baseUrl = process.env.CIRCLE_BASE_URL || DEFAULT_CIRCLE_BASE_URL;
+  const apiKey = String(process.env.CIRCLE_API_KEY || "").trim();
+  const baseUrl = String(
+    process.env.CIRCLE_BASE_URL || DEFAULT_CIRCLE_BASE_URL
+  ).replace(/\/+$/, "");
 
   const headers = {
     accept: "application/json",
@@ -71,6 +80,26 @@ async function circleFetch(path, { method = "GET", body, userToken } = {}) {
 }
 
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store");
+
+  let session;
+
+  try {
+    session = verifySession(req);
+  } catch (error) {
+    console.error("Session validation failed:", error);
+    return send(res, 500, {
+      error: "Login configuration is incomplete.",
+    });
+  }
+
+  if (!session) {
+    return send(res, 401, {
+      code: "WALLET_LOGIN_REQUIRED",
+      error: "Authentication required.",
+    });
+  }
+
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return send(res, 405, { error: "Only POST is allowed" });
@@ -99,7 +128,7 @@ export default async function handler(req, res) {
           {
             method: "POST",
             body: {
-              idempotencyKey: crypto.randomUUID(),
+              idempotencyKey: randomUUID(),
               deviceId,
               email,
             },
@@ -129,7 +158,7 @@ export default async function handler(req, res) {
             method: "POST",
             userToken,
             body: {
-              idempotencyKey: crypto.randomUUID(),
+              idempotencyKey: randomUUID(),
               accountType: "SCA",
               blockchains: [blockchain],
             },

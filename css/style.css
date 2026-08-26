@@ -243,3 +243,51 @@ pre {
   .secondary-actions { flex-direction: column; }
   .address-row { align-items: flex-start; flex-direction: column; }
 }
+
+/* Wallet application login */
+.login-shell {
+  min-height: calc(100vh - 138px);
+  align-content: start;
+}
+
+.login-card {
+  width: min(560px, 100%);
+  margin: 48px auto 0;
+}
+
+.login-actions {
+  margin-top: 20px;
+}
+
+.login-actions button {
+  width: 100%;
+}
+
+.session-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid #d9dee7;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #475467;
+  box-shadow: 0 3px 12px rgba(19, 33, 68, 0.04);
+}
+
+.logout-button {
+  min-height: 36px;
+  padding: 6px 12px;
+}
+
+@media (max-width: 680px) {
+  .login-card {
+    margin-top: 18px;
+  }
+
+  .session-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

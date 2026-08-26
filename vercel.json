@@ -2,35 +2,22 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-
   "rewrites": [
     {
       "source": "/wallets",
-      "destination": "https://circlewalletregistration.vercel.app/"
+      "destination": "/"
     },
     {
       "source": "/wallets/",
-      "destination": "https://circlewalletregistration.vercel.app/"
+      "destination": "/"
     },
     {
       "source": "/wallets/assets/:path*",
-      "destination": "https://circlewalletregistration.vercel.app/assets/:path*"
-    },
-    {
-      "source": "/wallets/css/:path*",
-      "destination": "https://circlewalletregistration.vercel.app/css/:path*"
-    },
-    {
-      "source": "/wallets/js/:path*",
-      "destination": "https://circlewalletregistration.vercel.app/js/:path*"
+      "destination": "/assets/:path*"
     },
     {
       "source": "/wallets/api/:path*",
-      "destination": "https://circlewalletregistration.vercel.app/api/:path*"
-    },
-    {
-      "source": "/wallets/:path*",
-      "destination": "https://circlewalletregistration.vercel.app/:path*"
+      "destination": "/api/:path*"
     }
   ]
 }
