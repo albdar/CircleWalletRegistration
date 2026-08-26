@@ -1,5 +1,15 @@
 {
   "framework": "vite",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/wallets",
+      "destination": "https://circlewalletregistration.vercel.app/"
+    },
+    {
+      "source": "/wallets/:path*",
+      "destination": "https://circlewalletregistration.vercel.app/:path*"
+    }
+  ]
 }
