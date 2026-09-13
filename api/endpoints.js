@@ -2,6 +2,17 @@ import { randomUUID } from "node:crypto";
 
 const DEFAULT_CIRCLE_BASE_URL = "https://api.circle.com";
 const DEFAULT_BLOCKCHAIN = "ETH-SEPOLIA";
+const SUPPORTED_BLOCKCHAINS = new Set(["ETH-SEPOLIA", "ARC-TESTNET"]);
+
+function normalizeBlockchain(value) {
+  const blockchain = String(value || DEFAULT_BLOCKCHAIN).trim().toUpperCase();
+
+  if (!SUPPORTED_BLOCKCHAINS.has(blockchain)) {
+    throw new Error(`Unsupported blockchain: ${blockchain}`);
+  }
+
+  return blockchain;
+}
 
 function getBody(req) {
   if (!req.body) return {};
@@ -124,17 +135,46 @@ export default async function handler(req, res) {
       }
 
       case "initializeUser": {
-        const { userToken } = params;
+        const { userToken, blockchain: requestedBlockchain } = params;
 
         if (!userToken) {
           return send(res, 400, { error: "Missing userToken" });
         }
 
-        const blockchain =
-          process.env.CIRCLE_BLOCKCHAIN || DEFAULT_BLOCKCHAIN;
+        const blockchain = normalizeBlockchain(requestedBlockchain);
 
         const { response, data } = await circleFetch(
           "/v1/w3s/user/initialize",
+          {
+            method: "POST",
+            userToken,
+            body: {
+              idempotencyKey: randomUUID(),
+              accountType: "SCA",
+              blockchains: [blockchain],
+            },
+          }
+        );
+
+        if (!response.ok) {
+          return send(res, response.status, data);
+        }
+
+        return send(res, 200, data.data || data);
+      }
+
+
+      case "createWallet": {
+        const { userToken, blockchain: requestedBlockchain } = params;
+
+        if (!userToken) {
+          return send(res, 400, { error: "Missing userToken" });
+        }
+
+        const blockchain = normalizeBlockchain(requestedBlockchain);
+
+        const { response, data } = await circleFetch(
+          "/v1/w3s/user/wallets",
           {
             method: "POST",
             userToken,

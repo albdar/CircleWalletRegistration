@@ -6,6 +6,7 @@ const apiEndpoint = `${baseUrl}api/endpoints`;
 
 const ui = {
   email: document.querySelector("#email"),
+  networkSelect: document.querySelector("#networkSelect"),
   btnSendOtp: document.querySelector("#btnSendOtp"),
   btnVerifyOtp: document.querySelector("#btnVerifyOtp"),
   btnInitialize: document.querySelector("#btnInitialize"),
@@ -17,6 +18,7 @@ const ui = {
   statusBox: document.querySelector("#statusBox"),
   deviceId: document.querySelector("#deviceId"),
   authState: document.querySelector("#authState"),
+  targetNetwork: document.querySelector("#targetNetwork"),
   walletCard: document.querySelector("#walletCard"),
   walletId: document.querySelector("#walletId"),
   walletAddress: document.querySelector("#walletAddress"),
@@ -38,6 +40,7 @@ const state = {
   wallets: [],
   usdcBalance: null,
   email: "",
+  selectedBlockchain: localStorage.getItem("circleTargetNetwork") || "ETH-SEPOLIA",
 };
 
 
@@ -80,6 +83,7 @@ function publicDebugState() {
   // Intentionally do not display userToken/encryptionKey/deviceEncryptionKey values.
   return {
     sdkReady: state.sdkReady,
+    selectedBlockchain: state.selectedBlockchain,
     deviceId: state.deviceId,
     otpSessionReady: Boolean(
       state.deviceToken && state.deviceEncryptionKey && state.otpToken
@@ -92,6 +96,13 @@ function publicDebugState() {
 }
 
 function render() {
+  if (ui.networkSelect) {
+    ui.networkSelect.value = state.selectedBlockchain;
+  }
+  if (ui.targetNetwork) {
+    ui.targetNetwork.textContent = state.selectedBlockchain;
+  }
+
   ui.deviceId.textContent = state.deviceId || "–";
   ui.authState.textContent = state.userToken
     ? `Email verified${state.email ? `: ${state.email}` : ""}`
@@ -100,7 +111,10 @@ function render() {
   const hasOtpSession =
     state.deviceToken && state.deviceEncryptionKey && state.otpToken;
   const authenticated = state.userToken && state.encryptionKey;
-  const hasWallet = state.wallets.length > 0;
+  const selectedWallet = state.wallets.find(
+    (wallet) => wallet.blockchain === state.selectedBlockchain
+  );
+  const hasWallet = Boolean(selectedWallet);
 
   ui.btnSendOtp.disabled =
     !state.sdkReady || !state.deviceId || !ui.email.value.trim();
@@ -117,7 +131,7 @@ function render() {
   ui.btnRefresh.disabled = !authenticated;
 
   if (hasWallet) {
-    const wallet = state.wallets[0];
+    const wallet = selectedWallet;
     ui.walletCard.classList.remove("hidden");
     ui.walletId.textContent = wallet.id || "–";
     ui.walletAddress.textContent = wallet.address || "–";
@@ -210,7 +224,7 @@ async function initializeSdk() {
 
     state.sdkReady = true;
     setSdkBadge("SDK ready", "ok");
-    setStatus("Circle SDK is ready. Enter an email address and send the OTP.");
+    setStatus(`Circle SDK is ready. Target network: ${state.selectedBlockchain}. Enter an email address and send the OTP.`);
 
     const cached = localStorage.getItem("circleDeviceId");
     if (cached) {
@@ -298,11 +312,14 @@ function verifyOtp() {
 async function initializeUser() {
   if (!state.userToken) return;
 
+  const blockchain = state.selectedBlockchain;
+
   try {
-    setStatus("Initializing Circle user…");
+    setStatus(`Preparing ${blockchain} wallet…`);
 
     const data = await callApi("initializeUser", {
       userToken: state.userToken,
+      blockchain,
     });
 
     state.challengeId = data.challengeId;
@@ -312,22 +329,38 @@ async function initializeUser() {
     }
 
     setStatus(
-      "User initialized. Now click “Create Wallet”.",
+      `${blockchain} wallet challenge is ready. Click “Create Wallet”.`,
       "success"
     );
     render();
   } catch (error) {
-
     const circleCode = Number(error?.data?.code ?? error?.data?.data?.code);
 
-    // Circle: User is already initialized.
     if (circleCode === 155106) {
-      state.challengeId = "";
-      setStatus(
-        "The Circle user is already initialized. Loading the existing wallet."
-      );
-      await loadWallets("alreadyInitialized");
-      return;
+      try {
+        const data = await callApi("createWallet", {
+          userToken: state.userToken,
+          blockchain,
+        });
+
+        state.challengeId = data.challengeId;
+
+        if (!state.challengeId) {
+          throw new Error("Circle did not return a challengeId.");
+        }
+
+        setStatus(
+          `${blockchain} additional-wallet challenge is ready. Click “Create Wallet”.`,
+          "success"
+        );
+        render();
+        return;
+      } catch (createError) {
+        console.error(createError);
+        setStatus(`Wallet preparation failed: ${createError.message}`, "error");
+        render();
+        return;
+      }
     }
 
     console.error(error);
@@ -384,38 +417,34 @@ async function loadWallets(source = "refresh") {
 
     if (!state.wallets.length) {
       state.usdcBalance = null;
-
-      if (source === "login") {
-        setStatus(
-          "Email verified, but no Circle wallet exists yet. Click “Initialize New User” to create one.",
-          "info"
-        );
-      } else {
-        setStatus(
-          "No wallet found yet. If it was just created, please refresh again in a few seconds."
-        );
-      }
-
+      setStatus(
+        `Email verified, but no Circle wallets exist yet. Click “Prepare Wallet” to create a ${state.selectedBlockchain} wallet.`,
+        "info"
+      );
       render();
       return;
     }
 
-    const primaryWallet =
-      state.wallets.find((w) => w.blockchain === "ETH-SEPOLIA") ||
-      state.wallets[0];
+    const primaryWallet = state.wallets.find(
+      (wallet) => wallet.blockchain === state.selectedBlockchain
+    );
 
-    // Display the preferred wallet first.
-    state.wallets = [
-      primaryWallet,
-      ...state.wallets.filter((w) => w.id !== primaryWallet.id),
-    ];
+    if (!primaryWallet) {
+      state.usdcBalance = null;
+      setStatus(
+        `No ${state.selectedBlockchain} wallet exists yet. Click “Prepare Wallet” to create one.`,
+        "info"
+      );
+      render();
+      return;
+    }
 
     await loadUsdcBalance(primaryWallet.id);
 
     if (source === "afterCreate") {
       setStatus("SCA wallet was created successfully.", "success");
     } else if (source === "alreadyInitialized" || source === "login") {
-      setStatus("Circle login successful. Existing wallet loaded.", "success");
+      setStatus(`${state.selectedBlockchain} wallet loaded successfully.`, "success");
     } else {
       setStatus("Wallet data refreshed successfully.", "success");
     }
@@ -468,7 +497,9 @@ function resetTest() {
 }
 
 async function copyAddress() {
-  const address = state.wallets[0]?.address;
+  const address = state.wallets.find(
+    (wallet) => wallet.blockchain === state.selectedBlockchain
+  )?.address;
   if (!address) return;
 
   try {
@@ -487,6 +518,23 @@ async function startApplication() {
   render();
   await initializeSdk();
 }
+
+ui.networkSelect.addEventListener("change", async () => {
+  state.selectedBlockchain = ui.networkSelect.value;
+  localStorage.setItem("circleTargetNetwork", state.selectedBlockchain);
+  state.challengeId = "";
+  state.usdcBalance = null;
+
+  if (state.userToken) {
+    await loadWallets("networkChange");
+  } else {
+    setStatus(
+      `Target network changed to ${state.selectedBlockchain}. Sign in with Circle OTP.`,
+      "info"
+    );
+    render();
+  }
+});
 
 ui.email.addEventListener("input", render);
 ui.btnSendOtp.addEventListener("click", requestOtp);

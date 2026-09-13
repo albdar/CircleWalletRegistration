@@ -87,3 +87,27 @@ For a public production service, consider adding rate limiting to the OTP endpoi
 This corrected package restores the shared `parseJsonResponse()` helper that is used by
 the Circle API calls. The previous OTP-only package accidentally removed this helper
 while removing the legacy username/password login.
+
+
+## Sepolia / Arc Testnet switch
+
+The application now supports two target networks:
+
+```text
+Ethereum Sepolia  -> ETH-SEPOLIA
+Arc Testnet       -> ARC-TESTNET
+```
+
+The Circle email/OTP login is the same for both.
+
+After login:
+
+- The wallet for the selected network is loaded automatically.
+- If it does not exist, click `Prepare Wallet`.
+- New Circle users are initialized with `/v1/w3s/user/initialize`.
+- Existing Circle users get an additional network wallet through `/v1/w3s/user/wallets`.
+- `Create Wallet` executes the returned Circle challenge.
+
+The server whitelists exactly `ETH-SEPOLIA` and `ARC-TESTNET`.
+
+Important: PartnerRegistry is chain-specific. A partner must be registered on the PartnerRegistry deployed on the same network as the selected wallet and Marketplace contracts.

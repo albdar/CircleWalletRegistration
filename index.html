@@ -12,7 +12,7 @@
     <div class="app-icon">C</div>
     <div>
       <div class="app-title">Circle Wallet Registration</div>
-      <div class="app-subtitle">User-Controlled Wallet · Email OTP · Ethereum Sepolia</div>
+      <div class="app-subtitle">User-Controlled Wallet · Email OTP · Sepolia / Arc Testnet</div>
     </div>
   </header>
 
@@ -28,6 +28,18 @@
 
       <div class="notice">
         No separate application password is required. Authentication is handled by Circle via email OTP.
+      </div>
+
+
+      <div class="field-group">
+        <label for="networkSelect">Target Network</label>
+        <select id="networkSelect">
+          <option value="ETH-SEPOLIA">Ethereum Sepolia</option>
+          <option value="ARC-TESTNET">Arc Testnet</option>
+        </select>
+        <div class="field-help">
+          The same Circle login is used for both networks.
+        </div>
       </div>
 
       <div class="field-group">
@@ -48,12 +60,12 @@
 
         <button id="btnInitialize" type="button" disabled>
           <span class="step-number">3</span>
-          Initialize New User
+          Prepare Wallet
         </button>
 
         <button id="btnCreateWallet" type="button" disabled>
           <span class="step-number">4</span>
-          Create New Wallet
+          Create Wallet
         </button>
       </div>
 
@@ -82,7 +94,7 @@
         </div>
         <div>
           <dt>Target Network</dt>
-          <dd>ETH-SEPOLIA</dd>
+          <dd id="targetNetwork">ETH-SEPOLIA</dd>
         </div>
       </dl>
     </section>
