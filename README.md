@@ -80,3 +80,10 @@ when the domain/project routing is configured accordingly.
 There is no longer a separate application password. Access to a user's Circle wallet is protected by Circle's email OTP flow. The Circle API key remains server-side in the Vercel function and must never be exposed with a `VITE_` prefix.
 
 For a public production service, consider adding rate limiting to the OTP endpoint to reduce abuse/spam.
+
+
+## Fix: OTP `parseJsonResponse is not defined`
+
+This corrected package restores the shared `parseJsonResponse()` helper that is used by
+the Circle API calls. The previous OTP-only package accidentally removed this helper
+while removing the legacy username/password login.
