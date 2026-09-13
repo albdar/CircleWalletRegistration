@@ -3,19 +3,6 @@ import { W3SSdk } from "@circle-fin/w3s-pw-web-sdk";
 const appId = import.meta.env.VITE_CIRCLE_APP_ID;
 const baseUrl = import.meta.env.BASE_URL;
 const apiEndpoint = `${baseUrl}api/endpoints`;
-const authEndpoint = `${baseUrl}api/auth`;
-
-const authUi = {
-  loginView: document.querySelector("#loginView"),
-  walletView: document.querySelector("#walletView"),
-  loginForm: document.querySelector("#loginForm"),
-  loginUser: document.querySelector("#loginUser"),
-  loginPassword: document.querySelector("#loginPassword"),
-  btnLogin: document.querySelector("#btnLogin"),
-  btnLogout: document.querySelector("#btnLogout"),
-  loginStatus: document.querySelector("#loginStatus"),
-  loggedInUser: document.querySelector("#loggedInUser"),
-};
 
 const ui = {
   email: document.querySelector("#email"),
@@ -50,143 +37,8 @@ const state = {
   challengeId: "",
   wallets: [],
   usdcBalance: null,
+  email: "",
 };
-
-function setLoginStatus(message, type = "info") {
-  authUi.loginStatus.textContent = message;
-  authUi.loginStatus.className = `status status-${type}`;
-}
-
-function showLogin(message = "Enter your username and password.", type = "info") {
-  authUi.walletView.classList.add("hidden");
-  authUi.loginView.classList.remove("hidden");
-  authUi.loginPassword.value = "";
-  setLoginStatus(message, type);
-
-  window.setTimeout(() => {
-    authUi.loginUser.focus();
-  }, 0);
-}
-
-function showWallet(username) {
-  authUi.loggedInUser.textContent = username || "–";
-  authUi.loginView.classList.add("hidden");
-  authUi.walletView.classList.remove("hidden");
-}
-
-async function parseJsonResponse(response) {
-  const text = await response.text();
-
-  if (!text) {
-    return {};
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    return {
-      error: text,
-    };
-  }
-}
-
-async function login(event) {
-  event?.preventDefault();
-
-  const username = authUi.loginUser.value.trim();
-  const password = authUi.loginPassword.value;
-
-  if (!username || !password) {
-    setLoginStatus("Enter both username and password.", "error");
-    return;
-  }
-
-  authUi.btnLogin.disabled = true;
-  setLoginStatus("Signing in…");
-
-  try {
-    const response = await fetch(authEndpoint, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username,
-        password,
-      }),
-    });
-
-    const data = await parseJsonResponse(response);
-
-    if (!response.ok) {
-      setLoginStatus(data.error || "Login failed.", "error");
-      return;
-    }
-
-    setLoginStatus("Login successful. Loading wallet application…", "success");
-
-    // Reload after login so all in-memory Circle state starts cleanly under
-    // the newly authenticated server session.
-    window.location.reload();
-  } catch (error) {
-    console.error("Wallet login failed:", error);
-    setLoginStatus(
-      `Login request failed: ${error?.message || String(error)}`,
-      "error"
-    );
-  } finally {
-    authUi.btnLogin.disabled = false;
-  }
-}
-
-async function logout() {
-  authUi.btnLogout.disabled = true;
-
-  try {
-    await fetch(authEndpoint, {
-      method: "DELETE",
-      credentials: "same-origin",
-    });
-  } catch (error) {
-    console.error("Wallet logout failed:", error);
-  } finally {
-    // Reload clears all Circle tokens held only in JavaScript memory.
-    window.location.reload();
-  }
-}
-
-async function checkApplicationLogin() {
-  try {
-    const response = await fetch(authEndpoint, {
-      method: "GET",
-      credentials: "same-origin",
-      cache: "no-store",
-    });
-
-    const data = await parseJsonResponse(response);
-
-    if (!response.ok) {
-      showLogin(data.error || "Could not verify the login session.", "error");
-      return false;
-    }
-
-    if (!data.authenticated) {
-      showLogin();
-      return false;
-    }
-
-    showWallet(data.username);
-    return true;
-  } catch (error) {
-    console.error("Login session check failed:", error);
-    showLogin(
-      `Could not verify the login session: ${error?.message || String(error)}`,
-      "error"
-    );
-    return false;
-  }
-}
 
 function setStatus(message, type = "info") {
   ui.statusBox.textContent = message;
@@ -224,7 +76,9 @@ function publicDebugState() {
 
 function render() {
   ui.deviceId.textContent = state.deviceId || "–";
-  ui.authState.textContent = state.userToken ? "Email verified" : "Not signed in";
+  ui.authState.textContent = state.userToken
+    ? `Email verified${state.email ? `: ${state.email}` : ""}`
+    : "Not signed in";
 
   const hasOtpSession =
     state.deviceToken && state.deviceEncryptionKey && state.otpToken;
@@ -275,11 +129,6 @@ async function callApi(action, params = {}) {
     err.status = response.status;
     err.data = data;
 
-    if (response.status === 401 && data.code === "WALLET_LOGIN_REQUIRED") {
-      err.loginRequired = true;
-      showLogin("Your login session has expired. Please sign in again.", "error");
-    }
-
     throw err;
   }
 
@@ -301,7 +150,7 @@ async function initializeSdk() {
   }
 
   try {
-    const onLoginComplete = (error, result) => {
+    const onLoginComplete = async (error, result) => {
       if (error || !result) {
         console.error("Circle Email OTP login failed:", error);
         setStatus(
@@ -317,11 +166,22 @@ async function initializeSdk() {
       state.userToken = result.userToken;
       state.encryptionKey = result.encryptionKey;
 
+      try {
+        state.sdk.setAuthentication({
+          userToken: state.userToken,
+          encryptionKey: state.encryptionKey,
+        });
+      } catch (authError) {
+        console.warn("Circle SDK authentication setup warning:", authError);
+      }
+
       setStatus(
-        "Email successfully verified. Next, initialize the user.",
+        "Email verified. Loading your existing Circle wallet…",
         "success"
       );
       render();
+
+      await loadWallets("login");
     };
 
     state.sdk = new W3SSdk(
@@ -359,6 +219,7 @@ async function requestOtp() {
   const email = ui.email.value.trim();
 
   if (!email || !state.deviceId) return;
+  state.email = email;
 
   try {
     // Start a new Circle login session.
@@ -399,7 +260,6 @@ async function requestOtp() {
     );
     render();
   } catch (error) {
-    if (error.loginRequired) return;
     console.error(error);
     setStatus(`OTP could not be sent: ${error.message}`, "error");
     render();
@@ -440,7 +300,6 @@ async function initializeUser() {
     );
     render();
   } catch (error) {
-    if (error.loginRequired) return;
 
     const circleCode = Number(error?.data?.code ?? error?.data?.data?.code);
 
@@ -508,9 +367,18 @@ async function loadWallets(source = "refresh") {
 
     if (!state.wallets.length) {
       state.usdcBalance = null;
-      setStatus(
-        "No wallet found yet. If it was just created, please refresh again in a few seconds."
-      );
+
+      if (source === "login") {
+        setStatus(
+          "Email verified, but no Circle wallet exists yet. Click “Initialize New User” to create one.",
+          "info"
+        );
+      } else {
+        setStatus(
+          "No wallet found yet. If it was just created, please refresh again in a few seconds."
+        );
+      }
+
       render();
       return;
     }
@@ -529,15 +397,14 @@ async function loadWallets(source = "refresh") {
 
     if (source === "afterCreate") {
       setStatus("SCA wallet was created successfully.", "success");
-    } else if (source === "alreadyInitialized") {
-      setStatus("Existing Circle wallet loaded successfully.", "success");
+    } else if (source === "alreadyInitialized" || source === "login") {
+      setStatus("Circle login successful. Existing wallet loaded.", "success");
     } else {
       setStatus("Wallet data refreshed successfully.", "success");
     }
 
     render();
   } catch (error) {
-    if (error.loginRequired) return;
     console.error(error);
     setStatus(`Wallet data could not be loaded: ${error.message}`, "error");
     render();
@@ -563,7 +430,6 @@ async function loadUsdcBalance(walletId) {
 
     state.usdcBalance = usdc?.amount ?? "0";
   } catch (error) {
-    if (error.loginRequired) return;
     console.warn("USDC balance could not be loaded:", error);
     state.usdcBalance = "not available";
   }
@@ -578,8 +444,9 @@ function resetTest() {
   state.challengeId = "";
   state.wallets = [];
   state.usdcBalance = null;
+  state.email = "";
   ui.email.value = "";
-  setStatus("Test reset. Enter a new email address.");
+  setStatus("Signed out locally. Enter an email address to sign in again.");
   render();
 }
 
@@ -601,17 +468,9 @@ async function copyAddress() {
 
 async function startApplication() {
   render();
-
-  const authenticated = await checkApplicationLogin();
-  if (!authenticated) {
-    return;
-  }
-
   await initializeSdk();
 }
 
-authUi.loginForm.addEventListener("submit", login);
-authUi.btnLogout.addEventListener("click", logout);
 ui.email.addEventListener("input", render);
 ui.btnSendOtp.addEventListener("click", requestOtp);
 ui.btnVerifyOtp.addEventListener("click", verifyOtp);

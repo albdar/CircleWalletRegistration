@@ -16,69 +16,18 @@
     </div>
   </header>
 
-  <main id="loginView" class="shell login-shell">
-    <section class="card login-card">
+  <main id="walletView" class="shell">
+<section class="card">
       <div class="card-header">
         <div>
-          <h1>Wallet Login</h1>
-          <p>Sign in to access Circle Wallet Registration.</p>
-        </div>
-        <span class="badge badge-waiting">Protected</span>
-      </div>
-
-      <form id="loginForm" autocomplete="on">
-        <div class="field-group">
-          <label for="loginUser">Username</label>
-          <input
-            id="loginUser"
-            type="text"
-            autocomplete="username"
-            required
-          />
-        </div>
-
-        <div class="field-group">
-          <label for="loginPassword">Password</label>
-          <input
-            id="loginPassword"
-            type="password"
-            autocomplete="current-password"
-            required
-          />
-        </div>
-
-        <div class="login-actions">
-          <button id="btnLogin" type="submit">Sign In</button>
-        </div>
-      </form>
-
-      <div id="loginStatus" class="status status-info">
-        Enter your username and password.
-      </div>
-    </section>
-  </main>
-
-  <main id="walletView" class="shell hidden">
-    <section class="session-bar">
-      <div>
-        Signed in as <strong id="loggedInUser">–</strong>
-      </div>
-      <button id="btnLogout" class="secondary logout-button" type="button">
-        Sign Out
-      </button>
-    </section>
-
-    <section class="card">
-      <div class="card-header">
-        <div>
-          <h1>Circle User-Controlled Wallet</h1>
-          <p>Create an SCA wallet on Ethereum Sepolia.</p>
+          <h1>Circle Wallet Login</h1>
+          <p>Sign in with your email and Circle OTP. Existing wallets are loaded automatically.</p>
         </div>
         <span id="sdkBadge" class="badge badge-waiting">SDK starting…</span>
       </div>
 
       <div class="notice">
-        The Circle API key remains exclusively on the server. Only the Circle App ID is used in the browser.
+        No separate application password is required. Authentication is handled by Circle via email OTP.
       </div>
 
       <div class="field-group">
@@ -99,18 +48,18 @@
 
         <button id="btnInitialize" type="button" disabled>
           <span class="step-number">3</span>
-          Initialize User
+          Initialize New User
         </button>
 
         <button id="btnCreateWallet" type="button" disabled>
           <span class="step-number">4</span>
-          Create Wallet
+          Create New Wallet
         </button>
       </div>
 
       <div class="secondary-actions">
         <button id="btnRefresh" class="secondary" type="button" disabled>Refresh Wallet</button>
-        <button id="btnReset" class="secondary" type="button">Reset Test</button>
+        <button id="btnReset" class="secondary" type="button">Sign Out / Reset</button>
       </div>
     </section>
 

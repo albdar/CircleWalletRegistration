@@ -1,104 +1,82 @@
-# Circle Wallet Registration
+# Circle Wallet Registration — Circle OTP Only
 
-Vanilla JavaScript test application for Circle User-Controlled Wallets with:
+This version removes the separate application username/password login.
 
-- Application login with username and password
-- Server-side signed HttpOnly session cookie
-- Email OTP
-- Circle Web SDK
-- Smart Contract Account (`SCA`)
-- Ethereum Sepolia (`ETH-SEPOLIA`)
-- Vercel Serverless API
-- Wallet address display
-- Optional USDC balance display
+The application now starts directly with Circle User-Controlled Wallet authentication:
 
-## 1. Requirements
+```text
+Email
+  ↓
+Send OTP
+  ↓
+Verify OTP with Circle
+  ↓
+Existing Circle wallet is loaded automatically
+```
 
-- Node.js 22 or newer
-- Circle Developer Account
-- Circle API Key
-- Circle User-Controlled Wallet App ID
-- Email OTP configured for the Circle application
+If the verified Circle user does not yet have a wallet, the UI enables:
 
-## 2. Environment variables
+```text
+Initialize New User
+  ↓
+Create New Wallet
+```
 
-Copy `.env.example` to `.env.local` for local development and replace all placeholders.
+## Required environment variables
 
-Required variables:
+Copy `.env.example` to `.env.local` for local development:
 
 ```text
 CIRCLE_API_KEY=YOUR_CIRCLE_API_KEY
 VITE_CIRCLE_APP_ID=YOUR_CIRCLE_APP_ID
 CIRCLE_BLOCKCHAIN=ETH-SEPOLIA
 CIRCLE_BASE_URL=https://api.circle.com
-WALLET_LOGIN_USER=walletadmin
-WALLET_LOGIN_PASSWORD=YOUR_STRONG_PASSWORD
-WALLET_SESSION_SECRET=YOUR_LONG_RANDOM_SECRET
 ```
 
-Generate a session secret, for example:
+The old variables are no longer needed and can be deleted from Vercel:
 
-```powershell
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```text
+WALLET_LOGIN_USER
+WALLET_LOGIN_PASSWORD
+WALLET_SESSION_SECRET
 ```
 
-Important:
-
-- `CIRCLE_API_KEY`, `WALLET_LOGIN_USER`, `WALLET_LOGIN_PASSWORD`, and `WALLET_SESSION_SECRET` are server-only values.
-- Never prefix those values with `VITE_`.
-- `VITE_CIRCLE_APP_ID` is intentionally available to the browser.
-- `.env.local` is ignored by Git and must not be pushed to GitHub.
-
-## 3. Install dependencies
+## Local start
 
 ```powershell
 npm install
-```
-
-## 4. Local development
-
-Because the project uses Vercel Serverless Functions under `/api`, start it with Vercel Dev:
-
-```powershell
 npm run dev:vercel
 ```
 
-The Vite-only command can be used for frontend-only work, but the API functions are not available there:
+## Production / Vercel
 
-```powershell
-npm run dev
+Set the Circle variables in:
+
+```text
+Vercel
+→ Project
+→ Settings
+→ Environment Variables
 ```
 
-## 5. Login flow
+Then redeploy.
 
-When the application opens, it first calls `/wallets/api/auth` to check the signed server session.
-
-If there is no valid session, the user sees the login screen. After a successful login, the server sets an HttpOnly, Secure, SameSite=Lax cookie valid for eight hours. The Circle API endpoint rejects requests without that session.
-
-Use **Sign Out** to delete the session cookie and clear the in-memory Circle state by reloading the page.
-
-## 6. Circle wallet flow
-
-After application login:
-
-1. Enter an email address.
-2. Send OTP.
-3. Verify OTP in the Circle window.
-4. Initialize the Circle user.
-5. Create the SCA wallet.
-6. Refresh the wallet if required.
-7. Review the wallet address and USDC balance.
-
-## 7. Vercel configuration
-
-Add all environment variables to the `circlewalletregistration` Vercel project. `VITE_CIRCLE_APP_ID` must be available during the build. The secret values remain server-side.
-
-After changing environment variables, redeploy the project.
-
-The project is configured with the Vite base path:
+The configured base path remains:
 
 ```text
 /wallets/
 ```
 
-The wallet project's `vercel.json` maps `/wallets/assets/...` and `/wallets/api/...` to its generated assets and serverless API routes so it can also be tested directly.
+so the application is intended to be opened at:
+
+```text
+https://www.lexsecure.biz/wallets/
+```
+
+when the domain/project routing is configured accordingly.
+
+## Security note
+
+There is no longer a separate application password. Access to a user's Circle wallet is protected by Circle's email OTP flow. The Circle API key remains server-side in the Vercel function and must never be exposed with a `VITE_` prefix.
+
+For a public production service, consider adding rate limiting to the OTP endpoint to reduce abuse/spam.

@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { verifySession } from "./_session.js";
 
 const DEFAULT_CIRCLE_BASE_URL = "https://api.circle.com";
 const DEFAULT_BLOCKCHAIN = "ETH-SEPOLIA";
@@ -81,24 +80,6 @@ async function circleFetch(path, { method = "GET", body, userToken } = {}) {
 
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
-
-  let session;
-
-  try {
-    session = verifySession(req);
-  } catch (error) {
-    console.error("Session validation failed:", error);
-    return send(res, 500, {
-      error: "Login configuration is incomplete.",
-    });
-  }
-
-  if (!session) {
-    return send(res, 401, {
-      code: "WALLET_LOGIN_REQUIRED",
-      error: "Authentication required.",
-    });
-  }
 
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
