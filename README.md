@@ -1,65 +1,74 @@
-# Circle Wallet Registration — Circle OTP Only
+# Circle Wallet Registration — Arc Mainnet + Testnet
 
-This version removes the separate application username/password login.
+This version supports:
 
-The application now starts directly with Circle User-Controlled Wallet authentication:
+- Arc Mainnet
+- Arc Testnet
+- Ethereum Sepolia
+- Circle User-Controlled Wallets with email OTP
+- automatic Circle App ID lookup per environment
+- Arc Mainnet USDC balance via the official Arc RPC
+
+## Important Arc Mainnet detail
+
+As of 16 September 2026, Circle Wallets documents Arc Testnet explicitly as `ARC-TESTNET`, but Arc Mainnet is not yet listed as a dedicated Circle Wallets chain code.
+
+For Arc Mainnet this application therefore uses Circle's documented generic mainnet chain code:
 
 ```text
-Email
-  ↓
-Send OTP
-  ↓
-Verify OTP with Circle
-  ↓
-Existing Circle wallet is loaded automatically
+EVM
 ```
 
-If the verified Circle user does not yet have a wallet, the UI enables:
+For User-Controlled Wallets, generic `EVM` supports EOA wallets, not SCA wallets. The UI still labels the target correctly as `ARC-MAINNET`.
+
+Arc Mainnet network values used by the app:
 
 ```text
-Initialize New User
-  ↓
-Create New Wallet
+Chain ID: 5042
+RPC: https://rpc.mainnet.arc.io
+Explorer: https://explorer.arc.io
+USDC ERC-20 interface: 0x3600000000000000000000000000000000000000
+USDC decimals: 6
 ```
 
-## Required environment variables
+## Vercel environment variables
 
-Copy `.env.example` to `.env.local` for local development:
+In Vercel:
 
 ```text
-CIRCLE_API_KEY=YOUR_CIRCLE_API_KEY
-VITE_CIRCLE_APP_ID=YOUR_CIRCLE_APP_ID
-CIRCLE_BLOCKCHAIN=ETH-SEPOLIA
+Project -> Settings -> Environment Variables
+```
+
+Set:
+
+```text
+CIRCLE_LIVE_API_KEY=LIVE_API_KEY:...
+CIRCLE_TEST_API_KEY=TEST_API_KEY:...
 CIRCLE_BASE_URL=https://api.circle.com
 ```
 
-The old variables are no longer needed and can be deleted from Vercel:
+If you only want Arc Mainnet, `CIRCLE_LIVE_API_KEY` is enough.
 
-```text
-WALLET_LOGIN_USER
-WALLET_LOGIN_PASSWORD
-WALLET_SESSION_SECRET
-```
+The old browser variable `VITE_CIRCLE_APP_ID` is no longer required. The backend gets the App ID from Circle's `/v1/w3s/config/entity` endpoint using the key for the selected environment.
+
+## Circle Console requirement for LIVE
+
+The LIVE environment must have User-Controlled Wallet email authentication configured under the Circle Wallets Configurator. The LIVE API key and the LIVE wallet configuration belong to the same Circle mainnet environment.
 
 ## Local start
 
 ```powershell
+Copy-Item .env.example .env.local
+# Edit .env.local and add your keys
 npm install
 npm run dev:vercel
 ```
 
-## Production / Vercel
+## Production build
 
-Set the Circle variables in:
-
-```text
-Vercel
-→ Project
-→ Settings
-→ Environment Variables
+```powershell
+npm run build
 ```
-
-Then redeploy.
 
 The configured base path remains:
 
@@ -67,47 +76,14 @@ The configured base path remains:
 /wallets/
 ```
 
-so the application is intended to be opened at:
+Expected URL:
 
 ```text
 https://www.lexsecure.biz/wallets/
 ```
 
-when the domain/project routing is configured accordingly.
+## Security
 
-## Security note
+Never put `LIVE_API_KEY` or `TEST_API_KEY` in browser JavaScript, HTML, a `VITE_...` variable, GitHub, or a public ZIP.
 
-There is no longer a separate application password. Access to a user's Circle wallet is protected by Circle's email OTP flow. The Circle API key remains server-side in the Vercel function and must never be exposed with a `VITE_` prefix.
-
-For a public production service, consider adding rate limiting to the OTP endpoint to reduce abuse/spam.
-
-
-## Fix: OTP `parseJsonResponse is not defined`
-
-This corrected package restores the shared `parseJsonResponse()` helper that is used by
-the Circle API calls. The previous OTP-only package accidentally removed this helper
-while removing the legacy username/password login.
-
-
-## Sepolia / Arc Testnet switch
-
-The application now supports two target networks:
-
-```text
-Ethereum Sepolia  -> ETH-SEPOLIA
-Arc Testnet       -> ARC-TESTNET
-```
-
-The Circle email/OTP login is the same for both.
-
-After login:
-
-- The wallet for the selected network is loaded automatically.
-- If it does not exist, click `Prepare Wallet`.
-- New Circle users are initialized with `/v1/w3s/user/initialize`.
-- Existing Circle users get an additional network wallet through `/v1/w3s/user/wallets`.
-- `Create Wallet` executes the returned Circle challenge.
-
-The server whitelists exactly `ETH-SEPOLIA` and `ARC-TESTNET`.
-
-Important: PartnerRegistry is chain-specific. A partner must be registered on the PartnerRegistry deployed on the same network as the selected wallet and Marketplace contracts.
+`.env.local` and `.vercel/` are intentionally excluded from source control and from the prepared download package.

@@ -12,12 +12,12 @@
     <div class="app-icon">C</div>
     <div>
       <div class="app-title">Circle Wallet Registration</div>
-      <div class="app-subtitle">User-Controlled Wallet · Email OTP · Sepolia / Arc Testnet</div>
+      <div class="app-subtitle">User-Controlled Wallet · Email OTP · Arc Mainnet / Testnet</div>
     </div>
   </header>
 
   <main id="walletView" class="shell">
-<section class="card">
+    <section class="card">
       <div class="card-header">
         <div>
           <h1>Circle Wallet Login</h1>
@@ -27,19 +27,17 @@
       </div>
 
       <div class="notice">
-        No separate application password is required. Authentication is handled by Circle via email OTP.
+        Circle Testnet and Mainnet are separate environments. Arc Mainnet uses a LIVE API key and a Circle EOA wallet.
       </div>
-
 
       <div class="field-group">
         <label for="networkSelect">Target Network</label>
         <select id="networkSelect">
-          <option value="ETH-SEPOLIA">Ethereum Sepolia</option>
+          <option value="ARC-MAINNET">Arc Mainnet</option>
           <option value="ARC-TESTNET">Arc Testnet</option>
+          <option value="ETH-SEPOLIA">Ethereum Sepolia</option>
         </select>
-        <div class="field-help">
-          The same Circle login is used for both networks.
-        </div>
+        <div class="field-help">Arc Mainnet is mapped to Circle's generic EVM mainnet wallet type.</div>
       </div>
 
       <div class="field-group">
@@ -48,25 +46,10 @@
       </div>
 
       <div class="steps">
-        <button id="btnSendOtp" type="button" disabled>
-          <span class="step-number">1</span>
-          Send OTP
-        </button>
-
-        <button id="btnVerifyOtp" type="button" disabled>
-          <span class="step-number">2</span>
-          Verify OTP
-        </button>
-
-        <button id="btnInitialize" type="button" disabled>
-          <span class="step-number">3</span>
-          Prepare Wallet
-        </button>
-
-        <button id="btnCreateWallet" type="button" disabled>
-          <span class="step-number">4</span>
-          Create Wallet
-        </button>
+        <button id="btnSendOtp" type="button" disabled><span class="step-number">1</span>Send OTP</button>
+        <button id="btnVerifyOtp" type="button" disabled><span class="step-number">2</span>Verify OTP</button>
+        <button id="btnInitialize" type="button" disabled><span class="step-number">3</span>Prepare Wallet</button>
+        <button id="btnCreateWallet" type="button" disabled><span class="step-number">4</span>Create Wallet</button>
       </div>
 
       <div class="secondary-actions">
@@ -80,22 +63,12 @@
       <div id="statusBox" class="status status-info">Application is initializing…</div>
 
       <dl class="details">
-        <div>
-          <dt>Device ID</dt>
-          <dd id="deviceId">–</dd>
-        </div>
-        <div>
-          <dt>Authentication</dt>
-          <dd id="authState">Not signed in</dd>
-        </div>
-        <div>
-          <dt>Account Type</dt>
-          <dd>SCA</dd>
-        </div>
-        <div>
-          <dt>Target Network</dt>
-          <dd id="targetNetwork">ETH-SEPOLIA</dd>
-        </div>
+        <div><dt>Device ID</dt><dd id="deviceId">–</dd></div>
+        <div><dt>Authentication</dt><dd id="authState">Not signed in</dd></div>
+        <div><dt>Environment</dt><dd id="environment">–</dd></div>
+        <div><dt>Account Type</dt><dd id="accountType">–</dd></div>
+        <div><dt>Target Network</dt><dd id="targetNetwork">ARC-MAINNET</dd></div>
+        <div><dt>Chain ID</dt><dd id="chainId">–</dd></div>
       </dl>
     </section>
 
@@ -109,25 +82,13 @@
       </div>
 
       <dl class="details wallet-details">
-        <div>
-          <dt>Wallet ID</dt>
-          <dd id="walletId">–</dd>
-        </div>
+        <div><dt>Wallet ID</dt><dd id="walletId">–</dd></div>
         <div>
           <dt>Wallet Address</dt>
-          <dd class="address-row">
-            <span id="walletAddress">–</span>
-            <button id="btnCopyAddress" class="copy-button" type="button">Copy</button>
-          </dd>
+          <dd class="address-row"><span id="walletAddress">–</span><button id="btnCopyAddress" class="copy-button" type="button">Copy</button></dd>
         </div>
-        <div>
-          <dt>Blockchain</dt>
-          <dd id="walletBlockchain">–</dd>
-        </div>
-        <div>
-          <dt>USDC Balance</dt>
-          <dd id="walletUsdc">–</dd>
-        </div>
+        <div><dt>Blockchain</dt><dd id="walletBlockchain">–</dd></div>
+        <div><dt>USDC Balance</dt><dd id="walletUsdc">–</dd></div>
       </dl>
     </section>
 
